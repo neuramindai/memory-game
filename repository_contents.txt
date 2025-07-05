@@ -1,0 +1,1091 @@
+REPOSITORY STRUCTURE AND CONTENTS
+Generated on: 2025-07-05T00:49:08.248Z
+Total files: 27
+================================================================================
+
+FOLDER STRUCTURE:
+--------------------------------------------------------------------------------
+├── .github
+│   └── workflows
+│       └── deploy.yml (.yml)
+├── public
+│   ├── card-images
+│   └── index.html (.html)
+├── src
+│   ├── app
+│   │   ├── game
+│   │   │   └── page.tsx (.tsx)
+│   │   ├── types
+│   │   │   └── game.ts (.ts)
+│   │   ├── globals.css (.css)
+│   │   ├── layout.tsx (.tsx)
+│   │   └── page.tsx (.tsx)
+│   ├── components
+│   │   ├── ui
+│   │   │   ├── Button.tsx (.tsx)
+│   │   │   ├── Card.tsx (.tsx)
+│   │   │   └── Scoreboard.tsx (.tsx)
+│   │   ├── GameBoard.tsx (.tsx)
+│   │   ├── GameStats.tsx (.tsx)
+│   │   └── PlayerSetup.tsx (.tsx)
+│   ├── lib
+│   │   ├── firebase-service.ts (.ts)
+│   │   ├── firebase-test.ts (.ts)
+│   │   ├── firebase.ts (.ts)
+│   │   └── utils.ts (.ts)
+│   ├── store
+│   │   └── game-store.ts (.ts)
+│   └── types
+│       └── games.ts (.ts)
+├── .gitignore
+├── eslint.config.mjs (.mjs)
+├── firebase.json (.json)
+├── next.config.ts (.ts)
+├── package.json (.json)
+├── postcss.config.mjs (.mjs)
+├── README.md (.md)
+└── tsconfig.json (.json)
+
+FILE CONTENTS:
+================================================================================
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: .github\workflows\deploy.yml
+════════════════════════════════════════════════════════════════════════════════
+
+name: Deploy Memory Game
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linter
+      run: npm run lint
+    
+    - name: Run type check
+      run: npm run type-check
+    
+    - name: Build application
+      run: npm run build
+      env:
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build for production
+      run: npm run build
+      env:
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+    
+    # Add your preferred deployment step here (Azure, Vercel, etc.)
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: .gitignore
+════════════════════════════════════════════════════════════════════════════════
+
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: eslint.config.mjs
+════════════════════════════════════════════════════════════════════════════════
+
+import { dirname } from "path";
+import { fileURLToPath } from "url";
+import { FlatCompat } from "@eslint/eslintrc";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+});
+
+const eslintConfig = [
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
+];
+
+export default eslintConfig;
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: firebase.json
+════════════════════════════════════════════════════════════════════════════════
+
+{
+  "hosting": {
+    "public": "out",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: next.config.ts
+════════════════════════════════════════════════════════════════════════════════
+
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
+};
+
+export default nextConfig;
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: package.json
+════════════════════════════════════════════════════════════════════════════════
+
+{
+  "name": "memory-game",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build && next export",
+    "deploy": "npm run build && firebase deploy",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@types/uuid": "^10.0.0",
+    "firebase": "^11.10.0",
+    "framer-motion": "^12.23.0",
+    "next": "15.3.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "uuid": "^11.1.0",
+    "zustand": "^5.0.6"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20.19.4",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.5",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: postcss.config.mjs
+════════════════════════════════════════════════════════════════════════════════
+
+const config = {
+  plugins: ["@tailwindcss/postcss"],
+};
+
+export default config;
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: public\index.html
+════════════════════════════════════════════════════════════════════════════════
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Welcome to Firebase Hosting</title>
+
+    <!-- update the version number as needed -->
+    <script defer src="/__/firebase/11.10.0/firebase-app-compat.js"></script>
+    <!-- include only the Firebase features as you need -->
+    <script defer src="/__/firebase/11.10.0/firebase-auth-compat.js"></script>
+    <script defer src="/__/firebase/11.10.0/firebase-database-compat.js"></script>
+    <script defer src="/__/firebase/11.10.0/firebase-firestore-compat.js"></script>
+    <script defer src="/__/firebase/11.10.0/firebase-functions-compat.js"></script>
+    <script defer src="/__/firebase/11.10.0/firebase-messaging-compat.js"></script>
+    <script defer src="/__/firebase/11.10.0/firebase-storage-compat.js"></script>
+    <script defer src="/__/firebase/11.10.0/firebase-analytics-compat.js"></script>
+    <script defer src="/__/firebase/11.10.0/firebase-remote-config-compat.js"></script>
+    <script defer src="/__/firebase/11.10.0/firebase-performance-compat.js"></script>
+    <!-- 
+      initialize the SDK after all desired features are loaded, set useEmulator to false
+      to avoid connecting the SDK to running emulators.
+    -->
+    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+
+    <style media="screen">
+      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
+      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
+      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
+      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
+      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
+      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
+      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
+      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
+      @media (max-width: 600px) {
+        body, #message { margin-top: 0; background: white; box-shadow: none; }
+        body { border-top: 16px solid #ffa100; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="message">
+      <h2>Welcome</h2>
+      <h1>Firebase Hosting Setup Complete</h1>
+      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
+      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
+    </div>
+    <p id="load">Firebase SDK Loading&hellip;</p>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const loadEl = document.querySelector('#load');
+        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+        // // The Firebase SDK is initialized and available here!
+        //
+        // firebase.auth().onAuthStateChanged(user => { });
+        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
+        // firebase.firestore().doc('/foo/bar').get().then(() => { });
+        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
+        // firebase.messaging().requestPermission().then(() => { });
+        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
+        // firebase.analytics(); // call to activate
+        // firebase.analytics().logEvent('tutorial_completed');
+        // firebase.performance(); // call to activate
+        //
+        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+
+        try {
+          let app = firebase.app();
+          let features = [
+            'auth', 
+            'database', 
+            'firestore',
+            'functions',
+            'messaging', 
+            'storage', 
+            'analytics', 
+            'remoteConfig',
+            'performance',
+          ].filter(feature => typeof app[feature] === 'function');
+          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
+        } catch (e) {
+          console.error(e);
+          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
+        }
+      });
+    </script>
+  </body>
+</html>
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: README.md
+════════════════════════════════════════════════════════════════════════════════
+
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Getting Started
+
+First, run the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\app\game\page.tsx
+════════════════════════════════════════════════════════════════════════════════
+
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\app\globals.css
+════════════════════════════════════════════════════════════════════════════════
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer components {
+  .game-card {
+    @apply relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-lg cursor-pointer transform transition-all duration-300 hover:scale-105;
+  }
+  
+  .game-card.flipped {
+    @apply bg-white border-2 border-gray-300;
+  }
+  
+  .game-card.matched {
+    @apply bg-green-100 border-2 border-green-400;
+  }
+}
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\app\layout.tsx
+════════════════════════════════════════════════════════════════════════════════
+
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "Create Next App",
+  description: "Generated by create next app",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        {children}
+      </body>
+    </html>
+  );
+}
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\app\page.tsx
+════════════════════════════════════════════════════════════════════════════════
+
+import Image from "next/image";
+
+export default function Home() {
+  return (
+    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+        <Image
+          className="dark:invert"
+          src="/next.svg"
+          alt="Next.js logo"
+          width={180}
+          height={38}
+          priority
+        />
+        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
+          <li className="mb-2 tracking-[-.01em]">
+            Get started by editing{" "}
+            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
+              src/app/page.tsx
+            </code>
+            .
+          </li>
+          <li className="tracking-[-.01em]">
+            Save and see your changes instantly.
+          </li>
+        </ol>
+
+        <div className="flex gap-4 items-center flex-col sm:flex-row">
+          <a
+            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
+            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Image
+              className="dark:invert"
+              src="/vercel.svg"
+              alt="Vercel logomark"
+              width={20}
+              height={20}
+            />
+            Deploy now
+          </a>
+          <a
+            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
+            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Read our docs
+          </a>
+        </div>
+      </main>
+      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
+        <a
+          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
+          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Image
+            aria-hidden
+            src="/file.svg"
+            alt="File icon"
+            width={16}
+            height={16}
+          />
+          Learn
+        </a>
+        <a
+          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
+          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Image
+            aria-hidden
+            src="/window.svg"
+            alt="Window icon"
+            width={16}
+            height={16}
+          />
+          Examples
+        </a>
+        <a
+          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
+          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Image
+            aria-hidden
+            src="/globe.svg"
+            alt="Globe icon"
+            width={16}
+            height={16}
+          />
+          Go to nextjs.org →
+        </a>
+      </footer>
+    </div>
+  );
+}
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\app\types\game.ts
+════════════════════════════════════════════════════════════════════════════════
+
+export interface Player {
+  id: string;
+  name: string;
+  score: number;
+  moves: number;
+  timeElapsed: number;
+}
+
+export interface Card {
+  id: string;
+  value: string;
+  isFlipped: boolean;
+  isMatched: boolean;
+  imageUrl?: string;
+}
+
+export interface GameState {
+  cards: Card[];
+  players: Player[];
+  currentPlayer: number;
+  gameStatus: 'setup' | 'playing' | 'paused' | 'finished';
+  difficulty: 'easy' | 'medium' | 'hard';
+  startTime: number | null;
+  gameMode: 'single' | 'multiplayer';
+}
+
+export interface GameScore {
+  id: string;
+  playerName: string;
+  score: number;
+  moves: number;
+  timeElapsed: number;
+  difficulty: string;
+  timestamp: number;
+}
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\components\GameBoard.tsx
+════════════════════════════════════════════════════════════════════════════════
+
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\components\GameStats.tsx
+════════════════════════════════════════════════════════════════════════════════
+
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\components\PlayerSetup.tsx
+════════════════════════════════════════════════════════════════════════════════
+
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\components\ui\Button.tsx
+════════════════════════════════════════════════════════════════════════════════
+
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\components\ui\Card.tsx
+════════════════════════════════════════════════════════════════════════════════
+
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\components\ui\Scoreboard.tsx
+════════════════════════════════════════════════════════════════════════════════
+
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\lib\firebase-service.ts
+════════════════════════════════════════════════════════════════════════════════
+
+import { 
+  collection, 
+  addDoc, 
+  query, 
+  orderBy, 
+  limit, 
+  getDocs, 
+  where,
+  Timestamp 
+} from 'firebase/firestore';
+import { db } from './firebase';
+import { GameScore } from '@/types/game';
+
+export class FirebaseService {
+  
+  /**
+   * Save a game score to Firestore
+   */
+  static async saveGameScore(scoreData: Omit<GameScore, 'id'>): Promise<string> {
+    try {
+      const docRef = await addDoc(collection(db, 'gameScores'), {
+        ...scoreData,
+        timestamp: Date.now()
+      });
+      console.log('Score saved with ID: ', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error saving score: ', error);
+      throw new Error('Failed to save score');
+    }
+  }
+
+  /**
+   * Get top scores for leaderboard
+   */
+  static async getTopScores(
+    difficulty: string = 'all', 
+    limitCount: number = 10
+  ): Promise<GameScore[]> {
+    try {
+      let q;
+      
+      if (difficulty === 'all') {
+        q = query(
+          collection(db, 'gameScores'),
+          orderBy('score', 'desc'),
+          limit(limitCount)
+        );
+      } else {
+        q = query(
+          collection(db, 'gameScores'),
+          where('difficulty', '==', difficulty),
+          orderBy('score', 'desc'),
+          limit(limitCount)
+        );
+      }
+
+      const querySnapshot = await getDocs(q);
+      const scores: GameScore[] = [];
+
+      querySnapshot.forEach((doc) => {
+        scores.push({
+          id: doc.id,
+          ...doc.data()
+        } as GameScore);
+      });
+
+      return scores;
+    } catch (error) {
+      console.error('Error fetching scores: ', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get today's top scores
+   */
+  static async getTodaysTopScores(limitCount: number = 5): Promise<GameScore[]> {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayTimestamp = today.getTime();
+
+      const q = query(
+        collection(db, 'gameScores'),
+        where('timestamp', '>=', todayTimestamp),
+        orderBy('timestamp', 'desc'),
+        orderBy('score', 'desc'),
+        limit(limitCount)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const scores: GameScore[] = [];
+
+      querySnapshot.forEach((doc) => {
+        scores.push({
+          id: doc.id,
+          ...doc.data()
+        } as GameScore);
+      });
+
+      return scores;
+    } catch (error) {
+      console.error('Error fetching today\'s scores: ', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get player's personal best scores
+   */
+  static async getPlayerBestScores(playerName: string): Promise<GameScore[]> {
+    try {
+      const q = query(
+        collection(db, 'gameScores'),
+        where('playerName', '==', playerName),
+        orderBy('score', 'desc'),
+        limit(5)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const scores: GameScore[] = [];
+
+      querySnapshot.forEach((doc) => {
+        scores.push({
+          id: doc.id,
+          ...doc.data()
+        } as GameScore);
+      });
+
+      return scores;
+    } catch (error) {
+      console.error('Error fetching player scores: ', error);
+      return [];
+    }
+  }
+}
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\lib\firebase-test.ts
+════════════════════════════════════════════════════════════════════════════════
+
+import { FirebaseService } from './firebase-service';
+
+export async function testFirebaseConnection(): Promise<boolean> {
+  try {
+    // Test saving a score
+    const testScore = {
+      playerName: 'Test Player',
+      score: 100,
+      moves: 10,
+      timeElapsed: 30000,
+      difficulty: 'easy',
+      timestamp: Date.now()
+    };
+
+    const scoreId = await FirebaseService.saveGameScore(testScore);
+    console.log('✅ Firebase connection successful! Score ID:', scoreId);
+
+    // Test fetching scores
+    const scores = await FirebaseService.getTopScores('easy', 1);
+    console.log('✅ Firebase read successful! Found scores:', scores.length);
+
+    return true;
+  } catch (error) {
+    console.error('❌ Firebase connection failed:', error);
+    return false;
+  }
+}
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\lib\firebase.ts
+════════════════════════════════════════════════════════════════════════════════
+
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+
+const firebaseConfig = {
+  // Add your Firebase config here
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+};
+
+const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\lib\utils.ts
+════════════════════════════════════════════════════════════════════════════════
+
+
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\store\game-store.ts
+════════════════════════════════════════════════════════════════════════════════
+
+import { create } from 'zustand';
+import { GameState, Card, Player } from '@/types/game';
+import { generateCards, checkForMatch } from '@/lib/game-logic';
+
+interface GameStore extends GameState {
+  initializeGame: (difficulty: string, players: string[], gameMode: string) => void;
+  flipCard: (cardId: string) => void;
+  resetGame: () => void;
+  updateScore: (playerId: string, points: number) => void;
+  nextPlayer: () => void;
+  endGame: () => void;
+}
+
+export const useGameStore = create<GameStore>((set, get) => ({
+  cards: [],
+  players: [],
+  currentPlayer: 0,
+  gameStatus: 'setup',
+  difficulty: 'medium',
+  startTime: null,
+  gameMode: 'single',
+
+  initializeGame: (difficulty, playerNames, gameMode) => {
+    const cards = generateCards(difficulty);
+    const players = playerNames.map((name, index) => ({
+      id: `player-${index}`,
+      name,
+      score: 0,
+      moves: 0,
+      timeElapsed: 0
+    }));
+
+    set({
+      cards,
+      players,
+      currentPlayer: 0,
+      gameStatus: 'playing',
+      difficulty: difficulty as any,
+      startTime: Date.now(),
+      gameMode: gameMode as any
+    });
+  },
+
+  flipCard: (cardId) => {
+    const state = get();
+    if (state.gameStatus !== 'playing') return;
+
+    const flippedCards = state.cards.filter(card => card.isFlipped && !card.isMatched);
+    if (flippedCards.length >= 2) return;
+
+    const newCards = state.cards.map(card => 
+      card.id === cardId ? { ...card, isFlipped: true } : card
+    );
+
+    set({ cards: newCards });
+
+    // Check for match after a delay
+    setTimeout(() => {
+      const currentState = get();
+      const flippedCards = currentState.cards.filter(card => card.isFlipped && !card.isMatched);
+      
+      if (flippedCards.length === 2) {
+        const isMatch = checkForMatch(flippedCards[0], flippedCards[1]);
+        
+        if (isMatch) {
+          // Match found
+          set({
+            cards: currentState.cards.map(card => 
+              flippedCards.includes(card) ? { ...card, isMatched: true } : card
+            )
+          });
+          
+          // Update score
+          const currentPlayer = currentState.players[currentState.currentPlayer];
+          get().updateScore(currentPlayer.id, 10);
+        } else {
+          // No match - flip cards back
+          set({
+            cards: currentState.cards.map(card => 
+              flippedCards.includes(card) ? { ...card, isFlipped: false } : card
+            )
+          });
+        }
+
+        // Update moves and switch player if multiplayer
+        if (currentState.gameMode === 'multiplayer' && !isMatch) {
+          get().nextPlayer();
+        }
+      }
+    }, 1000);
+  },
+
+  updateScore: (playerId, points) => {
+    set(state => ({
+      players: state.players.map(player => 
+        player.id === playerId 
+          ? { ...player, score: player.score + points, moves: player.moves + 1 }
+          : player
+      )
+    }));
+  },
+
+  nextPlayer: () => {
+    set(state => ({
+      currentPlayer: (state.currentPlayer + 1) % state.players.length
+    }));
+  },
+
+  resetGame: () => {
+    set({
+      cards: [],
+      players: [],
+      currentPlayer: 0,
+      gameStatus: 'setup',
+      startTime: null
+    });
+  },
+
+  endGame: () => {
+    set({ gameStatus: 'finished' });
+  }
+}));
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: src\types\games.ts
+════════════════════════════════════════════════════════════════════════════════
+
+// src/types/game.ts
+
+export interface Player {
+  id: string;
+  name: string;
+  score: number;
+  moves: number;
+  timeElapsed: number;
+}
+
+export interface Card {
+  id: string;
+  value: string;
+  isFlipped: boolean;
+  isMatched: boolean;
+  imageUrl?: string;
+}
+
+export interface GameState {
+  cards: Card[];
+  players: Player[];
+  currentPlayer: number;
+  gameStatus: 'setup' | 'playing' | 'paused' | 'finished';
+  difficulty: 'easy' | 'medium' | 'hard';
+  startTime: number | null;
+  gameMode: 'single' | 'multiplayer';
+}
+
+export interface GameScore {
+  id: string;
+  playerName: string;
+  score: number;
+  moves: number;
+  timeElapsed: number;
+  difficulty: string;
+  timestamp: number;
+  gameMode?: string;
+}
+
+════════════════════════════════════════════════════════════════════════════════
+FILE: tsconfig.json
+════════════════════════════════════════════════════════════════════════════════
+
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+
