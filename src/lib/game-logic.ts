@@ -1,4 +1,4 @@
-import { Card } from '@/types/game';
+import { Card } from '../app/types/game';
 import { v4 as uuidv4 } from 'uuid';
 
 const CARD_SETS = {

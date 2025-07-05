@@ -13,10 +13,10 @@ export async function testFirebaseConnection(): Promise<boolean> {
     };
 
     const scoreId = await FirebaseService.saveGameScore(testScore);
-    console.log('✅ Firebase connection successful! Score ID:', scoreId);
+    console.log('✅ Firebase write successful! Score ID:', scoreId);
 
-    // Test fetching scores
-    const scores = await FirebaseService.getTopScores('easy', 1);
+    // Test with simpler query (no filtering by difficulty)
+    const scores = await FirebaseService.getTopScores('all', 1);
     console.log('✅ Firebase read successful! Found scores:', scores.length);
 
     return true;

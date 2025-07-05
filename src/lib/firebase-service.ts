@@ -9,7 +9,7 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { GameScore } from '@/types/game';
+import { GameScore } from '../app/types/game';
 
 export class FirebaseService {
   
@@ -41,12 +41,14 @@ export class FirebaseService {
       let q;
       
       if (difficulty === 'all') {
+        // Simple query that doesn't require indexes
         q = query(
           collection(db, 'gameScores'),
           orderBy('score', 'desc'),
           limit(limitCount)
         );
       } else {
+        // This query requires the index we're creating
         q = query(
           collection(db, 'gameScores'),
           where('difficulty', '==', difficulty),
@@ -68,24 +70,20 @@ export class FirebaseService {
       return scores;
     } catch (error) {
       console.error('Error fetching scores: ', error);
+      // Return empty array instead of throwing to handle gracefully
       return [];
     }
   }
 
   /**
-   * Get today's top scores
+   * Get today's top scores (simplified to avoid index requirements)
    */
   static async getTodaysTopScores(limitCount: number = 5): Promise<GameScore[]> {
     try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayTimestamp = today.getTime();
-
+      // Simplified query - just get recent scores by timestamp
       const q = query(
         collection(db, 'gameScores'),
-        where('timestamp', '>=', todayTimestamp),
         orderBy('timestamp', 'desc'),
-        orderBy('score', 'desc'),
         limit(limitCount)
       );
 

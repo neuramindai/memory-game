@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { GameState, Card, Player } from '@/types/game';
-import { generateCards, checkForMatch } from '@/lib/game-logic';
+import { GameState, Card, Player } from 'src/app/types/game';
+import { generateCards, checkForMatch } from '../lib/game-logic';
 
 interface GameStore extends GameState {
-  initializeGame: (difficulty: string, players: string[], gameMode: string) => void;
+  initializeGame: (difficulty: 'easy' | 'medium' | 'hard', players: string[], gameMode: 'single' | 'multiplayer') => void;
   flipCard: (cardId: string) => void;
   resetGame: () => void;
   updateScore: (playerId: string, points: number) => void;
@@ -12,6 +12,7 @@ interface GameStore extends GameState {
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
+  // Initial state from GameState interface
   cards: [],
   players: [],
   currentPlayer: 0,
@@ -22,7 +23,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   initializeGame: (difficulty, playerNames, gameMode) => {
     const cards = generateCards(difficulty);
-    const players = playerNames.map((name, index) => ({
+    const players: Player[] = playerNames.map((name, index) => ({
       id: `player-${index}`,
       name,
       score: 0,
@@ -35,9 +36,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       players,
       currentPlayer: 0,
       gameStatus: 'playing',
-      difficulty: difficulty as any,
+      difficulty,
       startTime: Date.now(),
-      gameMode: gameMode as any
+      gameMode
     });
   },
 
@@ -45,10 +46,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     if (state.gameStatus !== 'playing') return;
 
-    const flippedCards = state.cards.filter(card => card.isFlipped && !card.isMatched);
+    const flippedCards = state.cards.filter((card: Card) => card.isFlipped && !card.isMatched);
     if (flippedCards.length >= 2) return;
 
-    const newCards = state.cards.map(card => 
+    const newCards = state.cards.map((card: Card) => 
       card.id === cardId ? { ...card, isFlipped: true } : card
     );
 
@@ -57,7 +58,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Check for match after a delay
     setTimeout(() => {
       const currentState = get();
-      const flippedCards = currentState.cards.filter(card => card.isFlipped && !card.isMatched);
+      const flippedCards = currentState.cards.filter((card: Card) => card.isFlipped && !card.isMatched);
       
       if (flippedCards.length === 2) {
         const isMatch = checkForMatch(flippedCards[0], flippedCards[1]);
@@ -65,7 +66,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (isMatch) {
           // Match found
           set({
-            cards: currentState.cards.map(card => 
+            cards: currentState.cards.map((card: Card) => 
               flippedCards.includes(card) ? { ...card, isMatched: true } : card
             )
           });
@@ -76,7 +77,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         } else {
           // No match - flip cards back
           set({
-            cards: currentState.cards.map(card => 
+            cards: currentState.cards.map((card: Card) => 
               flippedCards.includes(card) ? { ...card, isFlipped: false } : card
             )
           });
@@ -91,8 +92,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   updateScore: (playerId, points) => {
-    set(state => ({
-      players: state.players.map(player => 
+    set((state) => ({
+      ...state,
+      players: state.players.map((player: Player) => 
         player.id === playerId 
           ? { ...player, score: player.score + points, moves: player.moves + 1 }
           : player
@@ -101,7 +103,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   nextPlayer: () => {
-    set(state => ({
+    set((state) => ({
+      ...state,
       currentPlayer: (state.currentPlayer + 1) % state.players.length
     }));
   },
@@ -112,11 +115,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       players: [],
       currentPlayer: 0,
       gameStatus: 'setup',
-      startTime: null
+      difficulty: 'medium',
+      startTime: null,
+      gameMode: 'single'
     });
   },
 
   endGame: () => {
-    set({ gameStatus: 'finished' });
+    set((state) => ({ ...state, gameStatus: 'finished' }));
   }
 }));

@@ -1,4 +1,4 @@
-// src/types/game.ts
+// src/app/types/game.ts
 
 export interface Player {
   id: string;

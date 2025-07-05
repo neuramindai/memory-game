@@ -1,103 +1,239 @@
-import Image from "next/image";
+'use client'
+
+import { useEffect, useState } from 'react';
+import { useGameStore } from '../store/game-store';
+import PlayerSetup from '../components/PlayerSetup';
+import GameBoard from '../components/GameBoard';
+import { FirebaseService } from '../lib/firebase-service';
+import { calculateScore } from '../lib/game-logic';
+import { motion } from 'framer-motion';
+import { Player } from './types/game';
+
+interface FinalPlayerScore extends Player {
+  finalScore: number;
+  timeElapsed: number;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const { 
+    gameStatus, 
+    players, 
+    currentPlayer, 
+    difficulty, 
+    startTime, 
+    resetGame,
+    cards 
+  } = useGameStore();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+  const [gameTime, setGameTime] = useState(0);
+  const [showResults, setShowResults] = useState(false);
+  const [finalScores, setFinalScores] = useState<FinalPlayerScore[]>([]);
+
+  // Update game timer
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (gameStatus === 'playing' && startTime) {
+      interval = setInterval(() => {
+        setGameTime(Date.now() - startTime);
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [gameStatus, startTime]);
+
+  // Handle game completion
+  useEffect(() => {
+    if (gameStatus === 'finished') {
+      handleGameComplete();
+    }
+  }, [gameStatus]);
+
+  const handleGameComplete = async () => {
+    const endTime = Date.now();
+    const totalTime = startTime ? endTime - startTime : 0;
+    
+    // Calculate final scores
+    const finalPlayerScores: FinalPlayerScore[] = players.map((player: Player) => {
+      const calculatedScore = calculateScore(player.moves, totalTime, difficulty);
+      return {
+        ...player,
+        finalScore: calculatedScore,
+        timeElapsed: totalTime
+      };
+    });
+
+    // Sort by score for ranking
+    finalPlayerScores.sort((a: FinalPlayerScore, b: FinalPlayerScore) => b.finalScore - a.finalScore);
+    setFinalScores(finalPlayerScores);
+    setShowResults(true);
+
+    // Save scores to Firebase
+    try {
+      for (const player of finalPlayerScores) {
+        await FirebaseService.saveGameScore({
+          playerName: player.name,
+          score: player.finalScore,
+          moves: player.moves,
+          timeElapsed: totalTime,
+          difficulty,
+          timestamp: endTime
+        });
+      }
+      console.log('Scores saved to Firebase!');
+    } catch (error) {
+      console.error('Error saving scores:', error);
+    }
+  };
+
+  const formatTime = (milliseconds: number) => {
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    
+    if (minutes > 0) {
+      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+    return `${remainingSeconds}s`;
+  };
+
+  const handleNewGame = () => {
+    setShowResults(false);
+    setGameTime(0);
+    setFinalScores([]);
+    resetGame();
+  };
+
+  // Game Results Modal
+  if (showResults) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          <div className="text-center mb-6">
+            <div className="text-6xl mb-2">🎉</div>
+            <h2 className="text-2xl font-bold text-gray-800">Game Complete!</h2>
+            <p className="text-gray-600">Final Results</p>
+          </div>
+
+          <div className="space-y-3 mb-6">
+            {finalScores.map((player: FinalPlayerScore, index: number) => (
+              <div
+                key={player.id}
+                className={`
+                  flex items-center justify-between p-3 rounded-lg
+                  ${index === 0 
+                    ? 'bg-yellow-100 border-2 border-yellow-400' 
+                    : 'bg-gray-50 border border-gray-200'
+                  }
+                `}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className={`
+                    w-8 h-8 rounded-full flex items-center justify-center font-bold
+                    ${index === 0 ? 'bg-yellow-500 text-white' : 'bg-gray-300 text-gray-700'}
+                  `}>
+                    {index + 1}
+                  </div>
+                  <div>
+                    <div className="font-medium">{player.name}</div>
+                    <div className="text-sm text-gray-600">
+                      {player.moves} moves • {formatTime(player.timeElapsed)}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold text-lg">{player.finalScore.toLocaleString()}</div>
+                  <div className="text-xs text-gray-500">points</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={handleNewGame}
+              className="py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
+            >
+              New Game
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="py-2 px-4 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium transition-colors"
+            >
+              Main Menu
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      {/* Header with game info */}
+      {gameStatus === 'playing' && (
+        <motion.div
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="bg-white shadow-sm p-4"
         >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-6">
+              <div className="text-center">
+                <div className="text-sm text-gray-600">Time</div>
+                <div className="font-bold text-lg">{formatTime(gameTime)}</div>
+              </div>
+              
+              {players.length === 1 ? (
+                <div className="text-center">
+                  <div className="text-sm text-gray-600">Moves</div>
+                  <div className="font-bold text-lg">{players[0]?.moves || 0}</div>
+                </div>
+              ) : (
+                <div className="flex space-x-4">
+                  {players.map((player: Player, index: number) => (
+                    <div
+                      key={player.id}
+                      className={`text-center px-3 py-1 rounded-lg ${
+                        index === currentPlayer 
+                          ? 'bg-blue-100 border-2 border-blue-400' 
+                          : 'bg-gray-100'
+                      }`}
+                    >
+                      <div className="text-xs text-gray-600">{player.name}</div>
+                      <div className="font-bold">{player.score}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="text-center">
+                <div className="text-sm text-gray-600">Difficulty</div>
+                <div className="font-bold text-lg capitalize">{difficulty}</div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleNewGame}
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+            >
+              Quit Game
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Main Game Content */}
+      <div className="container mx-auto py-8">
+        {gameStatus === 'setup' && <PlayerSetup />}
+        {gameStatus === 'playing' && <GameBoard />}
+      </div>
     </div>
   );
 }
