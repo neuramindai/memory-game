@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useGameStore } from '../store/game-store';
 import GameCard from './ui/Card';
 import { motion, AnimatePresence } from 'framer-motion';
+import GameStats from '../components/GameStats';
 
 export default function GameBoard() {
   const { cards, gameStatus, flipCard, players, currentPlayer, endGame } = useGameStore();
@@ -13,7 +14,7 @@ export default function GameBoard() {
     if (cards.length > 0 && cards.every(card => card.isMatched)) {
       setTimeout(() => {
         endGame();
-      }, 1500); // Longer delay to enjoy the completion
+      }, 1500);
     }
   }, [cards, endGame]);
 
@@ -24,24 +25,30 @@ export default function GameBoard() {
   // Determine grid layout based on number of cards
   const getGridConfig = () => {
     const cardCount = cards.length;
-    if (cardCount <= 12) return { 
-      cols: 'grid-cols-3 md:grid-cols-4', 
-      gap: 'gap-4 md:gap-6',
-      maxWidth: 'max-w-2xl'
-    };
-    if (cardCount <= 16) return { 
-      cols: 'grid-cols-4', 
-      gap: 'gap-3 md:gap-5',
-      maxWidth: 'max-w-3xl'
-    };
-    return { 
-      cols: 'grid-cols-4 md:grid-cols-6', 
-      gap: 'gap-2 md:gap-4',
-      maxWidth: 'max-w-4xl'
-    };
+    
+    // Mobile-first responsive grid configurations
+    if (cardCount <= 12) {
+      return {
+        className: 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6',
+        containerClass: 'max-w-2xl',
+        gap: 'gap-2 sm:gap-3 md:gap-4'
+      };
+    } else if (cardCount <= 16) {
+      return {
+        className: 'grid grid-cols-4 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4',
+        containerClass: 'max-w-3xl',
+        gap: 'gap-2 sm:gap-3 md:gap-4'
+      };
+    } else {
+      return {
+        className: 'grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 xl:grid-cols-8',
+        containerClass: 'max-w-5xl',
+        gap: 'gap-2 sm:gap-3'
+      };
+    }
   };
 
-  const { cols, gap, maxWidth } = getGridConfig();
+  const { className, containerClass, gap } = getGridConfig();
 
   // Check if any cards are currently flipped (to disable clicking during matching check)
   const flippedCards = cards.filter(card => card.isFlipped && !card.isMatched);
@@ -52,134 +59,160 @@ export default function GameBoard() {
   const completionPercentage = cards.length > 0 ? (matchedCards / cards.length) * 100 : 0;
 
   return (
-    <div className="flex flex-col items-center space-y-8 p-4">
-      {/* Current Player Indicator with enhanced styling */}
-      <AnimatePresence mode="wait">
-        {players.length > 1 && (
-          <motion.div
-            key={currentPlayer}
-            initial={{ scale: 0.8, opacity: 0, y: -20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.8, opacity: 0, y: 20 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="relative"
-          >
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-xl px-8 py-4 text-white">
-              <div className="text-center">
-                <div className="text-sm opacity-90 font-medium">Current Player</div>
-                <div className="text-xl font-bold flex items-center justify-center space-x-2">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 px-4 py-6 sm:py-8">
+      {/* Game table surface */}
+      <div className="max-w-7xl mx-auto">
+        <GameStats />
+        
+        {/* Current Player Indicator for multiplayer */}
+        <AnimatePresence mode="wait">
+          {players.length > 1 && (
+            <motion.div
+              key={currentPlayer}
+              initial={{ scale: 0.8, opacity: 0, y: -20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="text-center mb-6"
+            >
+              <div className="inline-block bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-xl px-6 py-3 text-white">
+                <div className="text-sm opacity-90 font-medium">Current Turn</div>
+                <div className="text-lg font-bold flex items-center justify-center space-x-2">
                   <span>👤</span>
                   <span>{players[currentPlayer]?.name}</span>
                 </div>
               </div>
-              {/* Decorative elements */}
-              <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
-                <span className="text-xs">⭐</span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Progress Bar */}
-      <motion.div 
-        className="w-full max-w-md bg-gray-200 rounded-full h-3 shadow-inner"
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.5 }}
-      >
-        <motion.div
-          className="bg-gradient-to-r from-green-400 to-emerald-500 h-3 rounded-full shadow-sm"
-          initial={{ width: 0 }}
-          animate={{ width: `${completionPercentage}%` }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        />
-        <div className="text-center mt-2 text-sm text-gray-600 font-medium">
-          {Math.round(completionPercentage)}% Complete
-        </div>
-      </motion.div>
-
-      {/* Game Board Grid with enhanced container */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-        className={`
-          grid ${cols} ${gap} ${maxWidth} mx-auto p-6 md:p-8
-          bg-gradient-to-br from-white via-gray-50 to-blue-50
-          rounded-3xl shadow-2xl border border-white/50
-          backdrop-blur-sm
-        `}
-        style={{
-          background: `
-            radial-gradient(circle at 20% 20%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
-            linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e0f2fe 100%)
-          `
-        }}
-      >
-        {cards.map((card, index) => (
-          <motion.div
-            key={card.id}
-            initial={{ opacity: 0, y: 30, rotateY: -90 }}
-            animate={{ opacity: 1, y: 0, rotateY: 0 }}
-            transition={{ 
-              delay: index * 0.05, 
-              duration: 0.4,
-              type: "spring",
-              stiffness: 200
-            }}
-          >
-            <GameCard
-              card={card}
-              onClick={flipCard}
-              disabled={isCheckingMatch}
-            />
-          </motion.div>
-        ))}
-      </motion.div>
-
-      {/* Enhanced Game Status with better feedback */}
-      <AnimatePresence mode="wait">
+        {/* Progress Bar */}
         <motion.div 
-          key={`${isCheckingMatch}-${flippedCards.length}`}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          className="text-center"
+          className="max-w-md mx-auto mb-6"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.5 }}
         >
-          <div className={`
-            px-6 py-3 rounded-2xl font-medium text-lg shadow-lg
-            ${isCheckingMatch 
-              ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' 
-              : flippedCards.length === 1 
-                ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                : 'bg-gray-100 text-gray-600 border border-gray-200'
-            }
-          `}>
-            {isCheckingMatch && (
-              <div className="flex items-center justify-center space-x-2">
-                <div className="animate-spin w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full"></div>
-                <span>Checking for match...</span>
-              </div>
-            )}
-            {!isCheckingMatch && flippedCards.length === 1 && (
-              <div className="flex items-center justify-center space-x-2">
-                <span>🎯</span>
-                <span>Pick another card to match!</span>
-              </div>
-            )}
-            {!isCheckingMatch && flippedCards.length === 0 && (
-              <div className="flex items-center justify-center space-x-2">
-                <span>🚀</span>
-                <span>Click a card to start matching!</span>
-              </div>
-            )}
+          <div className="bg-gray-200 rounded-full h-3 shadow-inner">
+            <motion.div
+              className="bg-gradient-to-r from-green-400 to-emerald-500 h-3 rounded-full shadow-sm"
+              initial={{ width: 0 }}
+              animate={{ width: `${completionPercentage}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            />
+          </div>
+          <div className="text-center mt-2 text-sm text-gray-600 font-medium">
+            {Math.round(completionPercentage)}% Complete
           </div>
         </motion.div>
-      </AnimatePresence>
 
-      {/* Floating celebration particles when cards match */}
+        {/* Game Table */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className={`${containerClass} mx-auto`}
+        >
+          {/* Table surface */}
+          <div className="relative bg-gradient-to-br from-green-800 to-green-900 rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 border-8 border-amber-900"
+            style={{
+              boxShadow: `
+                inset 0 2px 4px rgba(0,0,0,0.5),
+                0 20px 40px rgba(0,0,0,0.4),
+                0 10px 20px rgba(0,0,0,0.3)
+              `,
+              background: `
+                radial-gradient(ellipse at center, #2d5a2d 0%, #1a3a1a 100%),
+                linear-gradient(135deg, #2d5a2d 0%, #1a3a1a 100%)
+              `
+            }}
+          >
+            {/* Felt texture overlay */}
+            <div className="absolute inset-0 opacity-30 rounded-2xl"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' result='noisy' /%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.4'/%3E%3C/svg%3E")`
+              }}
+            ></div>
+
+            {/* Cards grid */}
+            <div className={`${className} ${gap} relative z-10`}>
+              {cards.map((card, index) => (
+                <motion.div
+                  key={card.id}
+                  initial={{ opacity: 0, y: 30, rotateY: -90 }}
+                  animate={{ opacity: 1, y: 0, rotateY: 0 }}
+                  transition={{ 
+                    delay: index * 0.05, 
+                    duration: 0.4,
+                    type: "spring",
+                    stiffness: 200
+                  }}
+                  className="w-full"
+                  style={{
+                    // Maintain aspect ratio for cards
+                    maxWidth: '120px'
+                  }}
+                >
+                  <GameCard
+                    card={card}
+                    onClick={flipCard}
+                    disabled={isCheckingMatch}
+                  />
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Table edge highlight */}
+            <div className="absolute inset-0 rounded-2xl pointer-events-none"
+              style={{
+                boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.3)'
+              }}
+            ></div>
+          </div>
+        </motion.div>
+
+        {/* Game Status */}
+        <AnimatePresence mode="wait">
+          <motion.div 
+            key={`${isCheckingMatch}-${flippedCards.length}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="text-center mt-6"
+          >
+            <div className={`
+              inline-block px-6 py-3 rounded-2xl font-medium text-lg shadow-lg
+              ${isCheckingMatch 
+                ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' 
+                : flippedCards.length === 1 
+                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                  : 'bg-gray-100 text-gray-600 border border-gray-200'
+              }
+            `}>
+              {isCheckingMatch && (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full"></div>
+                  <span>Checking for match...</span>
+                </div>
+              )}
+              {!isCheckingMatch && flippedCards.length === 1 && (
+                <div className="flex items-center justify-center space-x-2">
+                  <span>🎯</span>
+                  <span>Pick another card!</span>
+                </div>
+              )}
+              {!isCheckingMatch && flippedCards.length === 0 && (
+                <div className="flex items-center justify-center space-x-2">
+                  <span>👆</span>
+                  <span>Click any card to start!</span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Floating celebration particles */}
       {cards.some(card => card.isMatched) && (
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           {[...Array(5)].map((_, i) => (

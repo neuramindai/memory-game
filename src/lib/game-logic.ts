@@ -1,45 +1,68 @@
+// src/lib/game-logic.ts
 import { Card } from '../app/types/game';
 import { v4 as uuidv4 } from 'uuid';
 
-const CARD_SETS = {
-  easy: 6,    // 3x4 grid
-  medium: 8,  // 4x4 grid  
-  hard: 12    // 4x6 grid
+// Card values with enhanced emoji selection
+const cardValues = {
+  easy: ['🎮', '🎨', '🎯', '🎪', '🎭', '🎪'],
+  medium: ['🎮', '🎨', '🎯', '🎪', '🎭', '🎸', '🎺', '🎻'],
+  hard: ['🎮', '🎨', '🎯', '🎪', '🎭', '🎸', '🎺', '🎻', '🎬', '🎤', '🎧', '🎲']
 };
 
-const EMOJI_THEMES = [
-  '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', 
-  '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔',
-  '🦆', '🐧', '🐦', '🦅', '🦉', '🐺', '🐗', '🐴'
-];
+export function generateCards(difficulty: 'easy' | 'medium' | 'hard'): Card[] {
+  const values = cardValues[difficulty];
+  const cards: Card[] = [];
 
-export function generateCards(difficulty: keyof typeof CARD_SETS): Card[] {
-  const pairCount = CARD_SETS[difficulty];
-  const selectedEmojis = EMOJI_THEMES.slice(0, pairCount);
-  
-  // Create pairs
-  const cardValues = [...selectedEmojis, ...selectedEmojis];
-  
-  // Shuffle and create card objects
-  const shuffled = cardValues.sort(() => Math.random() - 0.5);
-  
-  return shuffled.map(value => ({
-    id: uuidv4(),
-    value,
-    isFlipped: false,
-    isMatched: false
-  }));
+  // Create pairs of cards
+  values.forEach(value => {
+    // Create two cards with the same value (pair)
+    for (let i = 0; i < 2; i++) {
+      cards.push({
+        id: uuidv4(),
+        value,
+        isFlipped: false,
+        isMatched: false
+      });
+    }
+  });
+
+  // Shuffle cards using Fisher-Yates algorithm
+  for (let i = cards.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cards[i], cards[j]] = [cards[j], cards[i]];
+  }
+
+  return cards;
 }
 
 export function checkForMatch(card1: Card, card2: Card): boolean {
   return card1.value === card2.value;
 }
 
-export function calculateScore(moves: number, timeElapsed: number, difficulty: string): number {
-  const baseScore = 1000;
-  const movePenalty = moves * 5;
-  const timePenalty = Math.floor(timeElapsed / 1000) * 2;
-  const difficultyMultiplier = { easy: 1, medium: 1.5, hard: 2 }[difficulty] || 1;
+export function calculateScore(
+  moves: number, 
+  timeElapsed: number, 
+  difficulty: 'easy' | 'medium' | 'hard'
+): number {
+  // Base score based on difficulty
+  const baseScore = {
+    easy: 1000,
+    medium: 2000,
+    hard: 3000
+  }[difficulty];
+
+  // Time bonus (lose points for taking longer)
+  const timeInSeconds = Math.floor(timeElapsed / 1000);
+  const timeBonus = Math.max(0, 500 - timeInSeconds * 2);
+
+  // Move bonus (fewer moves = higher score)
+  const optimalMoves = {
+    easy: 12,
+    medium: 16,
+    hard: 24
+  }[difficulty];
   
-  return Math.max(0, Math.floor((baseScore - movePenalty - timePenalty) * difficultyMultiplier));
+  const moveBonus = Math.max(0, 500 - (moves - optimalMoves) * 20);
+
+  return baseScore + timeBonus + moveBonus;
 }

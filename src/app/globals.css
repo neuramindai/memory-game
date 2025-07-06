@@ -38,3 +38,44 @@
     @apply bg-green-100 border-2 border-green-400;
   }
 }
+
+@layer components {
+  .game-card {
+    @apply relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-lg cursor-pointer transform transition-all duration-300 hover:scale-105;
+  }
+  
+  .game-card.flipped {
+    @apply bg-white border-2 border-gray-300;
+  }
+  
+  .game-card.matched {
+    @apply bg-green-100 border-2 border-green-400;
+  }
+  
+  /* Ensure 3D transforms work properly */
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  
+  /* Card aspect ratio */
+  .aspect-card {
+    aspect-ratio: 2/3;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 3s ease-in-out infinite;
+}

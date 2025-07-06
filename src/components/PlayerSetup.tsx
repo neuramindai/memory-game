@@ -66,16 +66,31 @@ export default function PlayerSetup() {
       transition={{ duration: 0.6, type: "spring", stiffness: 200 }}
       className="max-w-lg mx-auto"
     >
-      <div className="bg-gradient-to-br from-white via-blue-50 to-purple-50 rounded-3xl shadow-2xl p-8 m-4 border border-white/50 backdrop-blur-sm">
-        {/* Header with floating animation */}
+      <div className="bg-gradient-to-br from-white via-blue-50 to-purple-50 rounded-3xl shadow-2xl p-8 m-4 border border-white/50 backdrop-blur-sm relative overflow-hidden">
+        {/* Animated background patterns */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-tl from-pink-400 to-purple-400 rounded-full translate-x-1/2 translate-y-1/2"></div>
+        </div>
+        
+        {/* Content wrapper with relative positioning */}
+        <div className="relative z-10">
+        {/* Header with enhanced floating animation */}
         <motion.div 
-          className="text-center mb-8"
+          className="text-center mb-8 relative"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
+          {/* Background decoration */}
+          <div className="absolute inset-0 -z-10">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-blue-400/20 rounded-full blur-3xl"></div>
+            <div className="absolute top-0 left-1/4 w-24 h-24 bg-purple-400/20 rounded-full blur-2xl"></div>
+            <div className="absolute top-0 right-1/4 w-24 h-24 bg-pink-400/20 rounded-full blur-2xl"></div>
+          </div>
+          
           <motion.div 
-            className="text-6xl mb-4"
+            className="text-6xl mb-4 relative inline-block"
             animate={{ 
               rotate: [0, -10, 10, -10, 0],
               scale: [1, 1.1, 1]
@@ -85,12 +100,18 @@ export default function PlayerSetup() {
               scale: { repeat: Infinity, duration: 2, repeatDelay: 3 }
             }}
           >
-            🧠
+            <span className="relative z-10">🧠</span>
+            {/* Glow effect */}
+            <motion.div 
+              className="absolute inset-0 bg-purple-400/30 rounded-full blur-xl"
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+            />
           </motion.div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-4xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-2 tracking-tight">
             Memory Game
           </h1>
-          <p className="text-gray-600 font-medium">Match pairs of cards to win!</p>
+          <p className="text-gray-600 font-medium text-lg">Match pairs of cards to win!</p>
         </motion.div>
 
         {/* Game Mode Selection with enhanced styling */}
@@ -111,19 +132,25 @@ export default function PlayerSetup() {
               <motion.button
                 key={key}
                 onClick={() => setGameMode(key as any)}
-                whileHover={{ scale: 1.02 }}
+                whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 className={`
-                  px-4 py-4 rounded-xl font-medium transition-all duration-200 border-2
+                  relative px-4 py-4 rounded-xl font-medium transition-all duration-200 border-2 overflow-hidden
                   ${gameMode === key
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white border-blue-400 shadow-lg'
-                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200 shadow-sm hover:shadow-md'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white border-blue-400 shadow-lg shadow-blue-500/25'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
                   }
                 `}
               >
-                <div className="text-xl mb-1">{emoji}</div>
-                <div className="text-sm font-bold">{label}</div>
-                <div className="text-xs opacity-80">{desc}</div>
+                {/* Hover gradient effect */}
+                {gameMode !== key && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-600/10 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                )}
+                <div className="relative z-10">
+                  <div className="text-xl mb-1">{emoji}</div>
+                  <div className="text-sm font-bold">{label}</div>
+                  <div className="text-xs opacity-80">{desc}</div>
+                </div>
               </motion.button>
             ))}
           </div>
@@ -231,23 +258,33 @@ export default function PlayerSetup() {
               <motion.button
                 key={key}
                 onClick={() => setDifficulty(key as any)}
-                whileHover={{ scale: 1.02 }}
+                whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 className={`
-                  px-3 py-4 rounded-xl text-center transition-all duration-200 border-2
+                  relative px-3 py-4 rounded-xl text-center transition-all duration-200 border-2 overflow-hidden
                   ${difficulty === key
                     ? `bg-gradient-to-br ${
-                        color === 'green' ? 'from-green-400 to-emerald-500 border-green-400' :
-                        color === 'yellow' ? 'from-yellow-400 to-orange-500 border-yellow-400' :
-                        'from-red-400 to-pink-500 border-red-400'
-                      } text-white shadow-lg`
-                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200 shadow-sm hover:shadow-md'
+                        color === 'green' ? 'from-green-400 to-emerald-500 border-green-400 shadow-lg shadow-green-500/25' :
+                        color === 'yellow' ? 'from-yellow-400 to-orange-500 border-yellow-400 shadow-lg shadow-yellow-500/25' :
+                        'from-red-400 to-pink-500 border-red-400 shadow-lg shadow-red-500/25'
+                      } text-white`
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
                   }
                 `}
               >
-                <div className="text-2xl mb-1">{emoji}</div>
-                <div className="font-bold text-sm">{label}</div>
-                <div className="text-xs opacity-80">{desc}</div>
+                {/* Hover effect */}
+                {difficulty !== key && (
+                  <div className={`absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br ${
+                    color === 'green' ? 'from-green-400/10 to-emerald-500/10' :
+                    color === 'yellow' ? 'from-yellow-400/10 to-orange-500/10' :
+                    'from-red-400/10 to-pink-500/10'
+                  }`}></div>
+                )}
+                <div className="relative z-10">
+                  <div className="text-2xl mb-1">{emoji}</div>
+                  <div className="font-bold text-sm">{label}</div>
+                  <div className="text-xs opacity-80">{desc}</div>
+                </div>
               </motion.button>
             ))}
           </div>
@@ -275,6 +312,8 @@ export default function PlayerSetup() {
             <span>Start Game</span>
           </span>
         </motion.button>
+        
+        </div>
       </div>
     </motion.div>
   );

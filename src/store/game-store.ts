@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { GameState, Card, Player } from 'src/app/types/game';
+import { GameState, Card, Player } from '../app/types/game';
 import { generateCards, checkForMatch } from '../lib/game-logic';
+import confetti from 'canvas-confetti';
 
 interface GameStore extends GameState {
   initializeGame: (difficulty: 'easy' | 'medium' | 'hard', players: string[], gameMode: 'single' | 'multiplayer') => void;
@@ -64,7 +65,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const isMatch = checkForMatch(flippedCards[0], flippedCards[1]);
         
         if (isMatch) {
-          // Match found
+          // Match found - trigger confetti!
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+          });
+
           set({
             cards: currentState.cards.map((card: Card) => 
               flippedCards.includes(card) ? { ...card, isMatched: true } : card
@@ -74,6 +81,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
           // Update score
           const currentPlayer = currentState.players[currentState.currentPlayer];
           get().updateScore(currentPlayer.id, 10);
+
+          // Check if game is complete
+          const updatedCards = get().cards;
+          if (updatedCards.every(card => card.isMatched)) {
+            // Bigger celebration for game completion!
+            confetti({
+              particleCount: 200,
+              angle: 60,
+              spread: 55,
+              origin: { x: 0 }
+            });
+            confetti({
+              particleCount: 200,
+              angle: 120,
+              spread: 55,
+              origin: { x: 1 }
+            });
+          }
         } else {
           // No match - flip cards back
           set({
